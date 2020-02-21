@@ -1,0 +1,61 @@
+function W = SelfpaceLeastR(data, label,lambda,gamma)
+%
+%%
+% Function SelfpaceLeastR
+%      Least Squares Loss with the L1-norm Regularization and selfpace
+%
+%% Problem
+%
+%  min  1/2 v|| label - data * W||^2 + lambda * ||W||_1-gamma*||v||_1
+%
+
+%
+%% Input parameters:
+%
+%  data-         Matrix of size m x n
+%                data can be a dense matrix
+%                         a sparse matrix
+%                         or a DCT matrix
+%  label -        Response vector (of size mx1)
+%  lambda -        L_1 norm regularization parameter (lambda >=0)
+%  gamma-      selfpace regularization parameter (gamma >=0)
+%
+%% Output parameters:
+%  W-         Solution
+% 
+%% Copyright WeikaiLi@cqjtu  email :leeweikai@outlook.com
+%
+
+    ex=-5:5;
+	lambda=2.^ex
+	disp('Press any key:'); pause;
+	nPar=length(lambda);
+	brainNetSet=cell(1,nPar);
+	opts=[];
+	opts.init=2;% Starting point: starting from a zero point here
+	opts.tFlag=0;% termination criterion
+	opts.nFlag=0;% normalization option: 0-without normalization
+	opts.rFlag=0;% regularization % the input parameter 'rho' is a ratio in (0, 1)
+	opts.rsL2=0; % the squared two norm term in min	 1/2 || A x - y||^2 + 1/2 rsL2 * ||x||_2^2 + z * ||x||_1
+	fprintf('\n mFlag=0, lFlag=0 \n');
+	opts.mFlag=0;% treating it as compositive function
+	opts.lFlag=0;% Nemirovski's line search
+	
+	for L=1:nPar
+		brainNet=zeros(nROI,nROI,nSubj);
+		for i=1:nSubj
+			tmp=data{i};
+			tmp=tmp-repmat(mean(tmp')',1,nROI);% data centralization
+			currentNet=zeros(nROI,nROI);
+			for j=1:nROI
+				y=[tmp(:,j)];
+				A=[tmp(:,setdiff(1:nROI,j))];
+				[x, funVal1, ValueL1]= LeastR(A, y, lambda(L), opts);
+				currentNet(setdiff(1:nROI,j),j) = x;
+			end
+			brainNet(:,:,i)=currentNet;
+		end
+		brainNetSet{L}=brainNet;
+		fprintf('Done %d/%d networks!\n',L,nPar);
+	end
+	save('brainNetSet_SR.mat','brainNetSet','lab');
